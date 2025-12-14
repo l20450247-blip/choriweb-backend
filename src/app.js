@@ -13,37 +13,55 @@ import { errorHandler } from './middlewares/errorHandler.js';
 
 const app = express();
 
-// ===== Middlewares =====
-app.use(morgan('dev'));
-app.use(express.json());
-app.use(cookieParser());
+/*CORS (Local + Vercel) */
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://choriweb-frontend.vercel.app',
+];
 
 app.use(
   cors({
-    origin: 'http://localhost:5173',
+    origin: (origin, callback) => {
+      // Permitir requests sin origin (Postman, Render health checks)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
   })
 );
 
-// Middleware log de requests
+/* Middlewares*/
+app.use(morgan('dev'));
+app.use(express.json());
+app.use(cookieParser());
+
+// Log de requests
 app.use((req, _res, next) => {
   console.log(`[REQ] ${req.method} ${req.url}`);
   next();
 });
 
-// ===== Rutas =====
+/* ======================
+   Rutas
+====================== */
 app.use('/api/auth', authRoutes);
 app.use('/api/categorias', categoryRoutes);
 app.use('/api/productos', productRoutes);
 app.use('/api/carrito', cartRoutes);
 app.use('/api/pedidos', orderRoutes);
 
-// Ruta raíz
-app.get('/', (req, res) => {
+// Ruta raíz (health check)
+app.get('/', (_req, res) => {
   res.json({ message: 'API Choriweb funcionando' });
 });
 
-// Middleware global de errores
+/*Errores*/
 app.use(errorHandler);
 
 export default app;
